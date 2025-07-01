@@ -1,143 +1,101 @@
-async function fetchData() {
-  const s = await fetch(
-    "https://rawcdn.githack.com/akabab/superhero-api/0.2.0/api/all.json"
-  ).then((response) => response.json());
+const API_URL =
+  "https://rawcdn.githack.com/akabab/superhero-api/0.2.0/api/all.json";
 
+async function fetchData() {
+  const data = await fetch(API_URL).then((res) => res.json());
   const table = document.querySelector("table");
   const select = document.querySelector("select");
-  let display = 20;
-  createButtons(s, display);
-  displayContant(display, table, s);
-  console.log(s.length);
-  first(table, s, display);
-  select.addEventListener("click", (e) => {
-    console.log(11111111);
-    table.innerHTML = `<tr>
-    <th rowspan="2">Icon</th>
-    <th rowspan="2">Name</th>
-    <th rowspan="2">Full Name</th>
-    <th colspan="6">Powerstats</th>
-    <th rowspan="2">Race</th>
-    <th rowspan="2">Gender</th>
-    <th rowspan="2">Height</th>
-    <th rowspan="2">Weight</th>
-    <th rowspan="2">Place Of Birth</th>
-    <th rowspan="2">Alignment</th>
-</tr>
+  let displayCount = 20;
 
-<tr>
-    <th>Intelligence</th>
-    <th>Strength</th>
-    <th>Speed</th>
-    <th>Durability</th>
-    <th>Power</th>
-    <th>Combat</th>
-</tr>`;
-    if (e.target.value == "all results") {
-      first(table, s, s.length);
-      createButtons(s, s.length);
-    } else {
-      first(table, s, Number(e.target.value));
-      createButtons(s, Number(e.target.value));
-      displayContant(Number(e.target.value), table, s);
-    }
+  renderTableHeaders(table);
+  renderRows(table, data, displayCount);
+  createPaginationButtons(data, displayCount);
+  handlePagination(table, data);
+
+  select.addEventListener("click", (e) => {
+    const value = e.target.value;
+    table.innerHTML = "";
+    renderTableHeaders(table);
+    const count = value === "all results" ? data.length : Number(value);
+    renderRows(table, data, count);
+    createPaginationButtons(data, count);
+    handlePagination(table, data);
   });
 }
-function createButtons(s, a) {
-  let count = 1;
-  let nextpage = 0;
-  const button = document.querySelectorAll("button");
-  button.forEach((b) => b.remove());
-  console.log("a=", a);
 
-  for (let i = 0; i < s.length; i += a) {
-    const button = document.createElement("button");
-    document.body.append(button);
-    button.textContent = count;
-    button.value = a + nextpage;
-    nextpage += a;
-    count++;
+function renderTableHeaders(table) {
+  const headerHTML = `
+    <tr>
+      <th rowspan="2">Icon</th>
+      <th rowspan="2">Name</th>
+      <th rowspan="2">Full Name</th>
+      <th colspan="6">Powerstats</th>
+      <th rowspan="2">Race</th>
+      <th rowspan="2">Gender</th>
+      <th rowspan="2">Height</th>
+      <th rowspan="2">Weight</th>
+      <th rowspan="2">Place Of Birth</th>
+      <th rowspan="2">Alignment</th>
+    </tr>
+    <tr>
+      <th>Intelligence</th>
+      <th>Strength</th>
+      <th>Speed</th>
+      <th>Durability</th>
+      <th>Power</th>
+      <th>Combat</th>
+    </tr>
+  `;
+  table.innerHTML = headerHTML;
+}
+
+function createPaginationButtons(data, count) {
+  document.querySelectorAll("button").forEach((btn) => btn.remove());
+  let page = 1;
+  for (let i = 0; i < data.length; i += count) {
+    const btn = document.createElement("button");
+    btn.textContent = page++;
+    btn.dataset.start = i;
+    btn.dataset.end = i + count;
+    document.body.appendChild(btn);
   }
 }
-function displayContant(num, table, s) {
-  const buttons = document.querySelectorAll("button");
-  buttons.forEach((button) => {
-    button.addEventListener("click", (e) => {
-      table.innerHTML = `<tr>
-    <th rowspan="2">Icon</th>
-    <th rowspan="2">Name</th>
-    <th rowspan="2">Full Name</th>
-    <th colspan="6">Powerstats</th>
-    <th rowspan="2">Race</th>
-    <th rowspan="2">Gender</th>
-    <th rowspan="2">Height</th>
-    <th rowspan="2">Weight</th>
-    <th rowspan="2">Place Of Birth</th>
-    <th rowspan="2">Alignment</th>
-</tr>
 
-<tr>
-    <th>Intelligence</th>
-    <th>Strength</th>
-    <th>Speed</th>
-    <th>Durability</th>
-    <th>Power</th>
-    <th>Combat</th>
-</tr>`;
-      for (let i = e.target.value - num; i < e.target.value; i++) {
-        console.log(i);
-
-        if (i > s.length - 1) {
-          break;
-        }
-        const tr = document.createElement("tr");
-        const section = `<td><img src="${s[i].images.xs}" alt="${s[i].name}"></td>
-<td>${s[i].name}</td>
-<td>${s[i].biography.fullName}</td>
-
-<td>${s[i].powerstats.intelligence}</td>
-<td>${s[i].powerstats.strength}</td>
-<td>${s[i].powerstats.speed}</td>
-<td>${s[i].powerstats.durability}</td>
-<td>${s[i].powerstats.power}</td>
-<td>${s[i].powerstats.combat}</td>
-
-<td>${s[i].appearance.race}</td>
-<td>${s[i].appearance.gender}</td>
-<td>${s[i].appearance.height}</td>
-<td>${s[i].appearance.weight}</td>
-<td>${s[i].biography.placeOfBirth}</td>
-<td>${s[i].biography.alignment}</td>
-        `;
-        tr.innerHTML = section;
-        table.appendChild(tr);
-      }
+function handlePagination(table, data) {
+  document.querySelectorAll("button").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const start = Number(btn.dataset.start);
+      const end = Number(btn.dataset.end);
+      table.innerHTML = "";
+      renderTableHeaders(table);
+      renderRows(table, data.slice(start, end));
     });
   });
 }
 
-function first(table, s, num) {
-  for (let i = 0; i < num; i++) {
+function renderRows(table, data, limit = data.length) {
+  for (let i = 0; i < limit && i < data.length; i++) {
+    const hero = data[i];
     const tr = document.createElement("tr");
-    const section = `<td><img src="${s[i].images.xs}" alt="${s[i].name}"></td>
-<td>${s[i].name}</td>
-<td>${s[i].biography.fullName}</td>
+    tr.innerHTML = `
+      <td><img src="${hero.images.xs}" alt="${hero.name}"></td>
+      <td>${hero.name}</td>
+      <td>${hero.biography.fullName}</td>
 
-<td>${s[i].powerstats.intelligence}</td>
-<td>${s[i].powerstats.strength}</td>
-<td>${s[i].powerstats.speed}</td>
-<td>${s[i].powerstats.durability}</td>
-<td>${s[i].powerstats.power}</td>
-<td>${s[i].powerstats.combat}</td>
+      <td>${hero.powerstats.intelligence}</td>
+      <td>${hero.powerstats.strength}</td>
+      <td>${hero.powerstats.speed}</td>
+      <td>${hero.powerstats.durability}</td>
+      <td>${hero.powerstats.power}</td>
+      <td>${hero.powerstats.combat}</td>
 
-<td>${s[i].appearance.race}</td>
-<td>${s[i].appearance.gender}</td>
-<td>${s[i].appearance.height}</td>
-<td>${s[i].appearance.weight}</td>
-<td>${s[i].biography.placeOfBirth}</td>
-<td>${s[i].biography.alignment}</td>
+      <td>${hero.appearance.race}</td>
+      <td>${hero.appearance.gender}</td>
+      <td>${hero.appearance.height[1]}</td>
+      <td>${hero.appearance.weight[1]}</td>
+      <td>${hero.biography.placeOfBirth}</td>
+      <td>${hero.biography.alignment}</td>
     `;
-    tr.innerHTML = section;
     table.appendChild(tr);
   }
 }
