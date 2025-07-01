@@ -1,11 +1,13 @@
 const API_URL =
   "https://rawcdn.githack.com/akabab/superhero-api/0.2.0/api/all.json";
+let data = [];
+let displayCount = 20;
+const table = document.querySelector("table");
+const select = document.querySelector("select");
+const search = document.getElementById("search");
 
 async function fetchData() {
-  const data = await fetch(API_URL).then((res) => res.json());
-  const table = document.querySelector("table");
-  const select = document.querySelector("select");
-  let displayCount = 20;
+  data = await fetch(API_URL).then((res) => res.json());
 
   renderTableHeaders(table);
   renderRows(table, data, displayCount);
@@ -16,15 +18,15 @@ async function fetchData() {
     const value = e.target.value;
     table.innerHTML = "";
     renderTableHeaders(table);
-    const count = value === "all results" ? data.length : Number(value);
-    renderRows(table, data, count);
-    createPaginationButtons(data, count);
+    displayCount = value === "all results" ? data.length : Number(value);
+    renderRows(table, data, displayCount);
+    createPaginationButtons(data, displayCount);
     handlePagination(table, data);
   });
 }
 
 function renderTableHeaders(table) {
-  const headerHTML = `
+  table.innerHTML = `
     <tr>
       <th rowspan="2">Icon</th>
       <th rowspan="2">Name</th>
@@ -46,7 +48,6 @@ function renderTableHeaders(table) {
       <th>Combat</th>
     </tr>
   `;
-  table.innerHTML = headerHTML;
 }
 
 function createPaginationButtons(data, count) {
@@ -57,7 +58,7 @@ function createPaginationButtons(data, count) {
     btn.textContent = page++;
     btn.dataset.start = i;
     btn.dataset.end = i + count;
-    document.body.appendChild(btn);
+    document.body.append(btn);
   }
 }
 
@@ -81,14 +82,12 @@ function renderRows(table, data, limit = data.length) {
       <td><img src="${hero.images.xs}" alt="${hero.name}"></td>
       <td>${hero.name}</td>
       <td>${hero.biography.fullName}</td>
-
       <td>${hero.powerstats.intelligence}</td>
       <td>${hero.powerstats.strength}</td>
       <td>${hero.powerstats.speed}</td>
       <td>${hero.powerstats.durability}</td>
       <td>${hero.powerstats.power}</td>
       <td>${hero.powerstats.combat}</td>
-
       <td>${hero.appearance.race}</td>
       <td>${hero.appearance.gender}</td>
       <td>${hero.appearance.height[1]}</td>
@@ -96,8 +95,30 @@ function renderRows(table, data, limit = data.length) {
       <td>${hero.biography.placeOfBirth}</td>
       <td>${hero.biography.alignment}</td>
     `;
-    table.appendChild(tr);
+    table.append(tr);
   }
 }
+
+
+
+
+
+
+
+
+
+
+search.addEventListener("input", (event) => {
+  const value = event.target.value.toLowerCase().trim()
+  const x = data.filter((hero) =>
+
+    hero.name.toLowerCase().includes(value)
+  );
+  table.innerHTML = "";
+  renderTableHeaders(table);
+  renderRows(table, x, displayCount);
+  createPaginationButtons(x, displayCount);
+  handlePagination(table, x);
+});
 
 fetchData();
