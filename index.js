@@ -49,17 +49,39 @@ function renderTableHeaders(table) {
     </tr>
   `;
 }
-
 function createPaginationButtons(data, count) {
-  document.querySelectorAll("button").forEach((btn) => btn.remove());
+  const removold = document.querySelector(".pagination");
+  if (removold) removold.remove();
+
+  const div = document.createElement("div");
+  div.className = "pagination";
+  div.style.padding = "10px";
+  div.style.display = "flex";
+  div.style.justifyContent = "center";
+  div.style.gap = "4px";  
+  div.style.borderRadius = "8px";
+  div.style.marginTop = "20px";
+
   let page = 1;
   for (let i = 0; i < data.length; i += count) {
     const btn = document.createElement("button");
     btn.textContent = page++;
     btn.dataset.start = i;
     btn.dataset.end = i + count;
-    document.body.append(btn);
+
+    btn.style.backgroundColor = "rgb(64, 224, 208)";
+    btn.style.color = "ffff";
+    btn.style.padding = "8px 14px";
+    btn.style.borderRadius = "5px";
+    btn.style.cursor = "pointer";
+    btn.style.fontWeight = "bold";
+    btn.style.transition = "background-color 0.3s, color 0.3s";
+
+   
+    div.appendChild(btn);
   }
+
+  document.body.append(div);
 }
 
 function handlePagination(table, data) {
@@ -107,18 +129,21 @@ function renderRows(table, data, limit = data.length) {
 
 
 
-
-search.addEventListener("input", (event) => {
+  function searchinput() {
+  search.addEventListener("input", (event) => {
   const value = event.target.value.toLowerCase().trim()
-  const x = data.filter((hero) =>
-
-    hero.name.toLowerCase().includes(value)
+  const x = data.filter((filter) =>
+    filter.name.toLowerCase().includes(value)
   );
   table.innerHTML = "";
   renderTableHeaders(table);
   renderRows(table, x, displayCount);
   createPaginationButtons(x, displayCount);
   handlePagination(table, x);
-});
+});    
+  }
+
+
+searchinput()
 
 fetchData();
