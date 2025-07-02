@@ -1,33 +1,479 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            color: #fff;
+            background: hsl(0, 0%, 12%);
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card-container {
+            background: #1a1a2e;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .details-div {
+            padding: 20px;
+            color: #fff;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #1a1a2e;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+
+        th {
+            background: #2a2a4e;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            transition: background-color 0.3s ease;
+        }
+
+        th:hover {
+            background: #3a3a6e;
+        }
+
+        th.sortable::after {
+            content: ' ↕️';
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        th.sort-ascending::after {
+            content: ' ↑';
+            color: #4CAF50;
+        }
+
+        th.sort-descending::after {
+            content: ' ↓';
+            color: #f44336;
+        }
+
+        img {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+        }
+
+        select {
+            padding: 8px;
+            background: #2a2a4e;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+
+        #controls {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 0 20px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        #searchInput {
+            padding: 8px 12px;
+            background: #2a2a4e;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 4px;
+            width: 300px;
+            font-size: 14px;
+        }
+
+        #searchInput::placeholder {
+            color: #888;
+        }
+
+        #searchInput:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .pagination {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+    </style>
 </head>
 
 <body>
-    <!-- From Uiverse.io by boryanakrasteva --> 
-<div class="input-container">
-  <input type="text" name="text" class="input" id ="search" placeholder="search...">
-  
-</div>
 
+    <div id="controls" style="display: none;">
+        <label for="limitSelect">Show: </label>
+        <select id="limitSelect">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="all">All results</option>
+        </select>
 
-    <select id="1">
-        <option value="10">10</option>
-        <option value="20">20</option>
-        <option value="50">50</option>
-        <option value="100">100</option>
-        <option value="all results">all results</option>
-    </select>
-    <table>
-    <script src="index.js"></script>
+        <input type="text" id="searchInput" placeholder="Search heroes by name...">
+    </div>
+
+    <table id="heroTable" style="display: none;">
+        <thead>
+            <tr>
+                <th rowspan="2">Icon</th>
+                <th rowspan="2" class="sortable" data-column="name">Name</th>
+                <th rowspan="2" class="sortable" data-column="fullName">Full Name</th>
+                <th colspan="6">Powerstats</th>
+                <th rowspan="2" class="sortable" data-column="race">Race</th>
+                <th rowspan="2" class="sortable" data-column="gender">Gender</th>
+                <th rowspan="2" class="sortable" data-column="height">Height</th>
+                <th rowspan="2" class="sortable" data-column="weight">Weight</th>
+                <th rowspan="2" class="sortable" data-column="placeOfBirth">Place Of Birth</th>
+                <th rowspan="2" class="sortable" data-column="alignment">Alignment</th>
+            </tr>
+            <tr>
+                <th class="sortable" data-column="intelligence">Intelligence</th>
+                <th class="sortable" data-column="strength">Strength</th>
+                <th class="sortable" data-column="speed">Speed</th>
+                <th class="sortable" data-column="durability">Durability</th>
+                <th class="sortable" data-column="power">Power</th>
+                <th class="sortable" data-column="combat">Combat</th>
+            </tr>
+        </thead>
+        <tbody id="heroTableBody">
+        </tbody>
     </table>
-           
 
+    <script>
+        let superHeroes = [];
+        let filteredHeroes = [];
+        let currentSort = { column: null, direction: 'ascending' };
+        let displayLimit = 20;
+        let currentPage = 0;
+
+        const loadSuperHeroes = (heroes) => {
+            superHeroes = heroes;
+            filteredHeroes = [...superHeroes];
+            document.getElementById('controls').style.display = 'flex';
+            document.getElementById('heroTable').style.display = 'table';
+
+            setupEventListeners();
+            renderRows();
+            createPaginationButtons(filteredHeroes, displayLimit);
+            handlePagination(document.getElementById('heroTable'), filteredHeroes);
+        };
+
+        const setupEventListeners = () => {
+            const sortableHeaders = document.querySelectorAll('th.sortable');
+            sortableHeaders.forEach(header => {
+                header.addEventListener('click', () => {
+                    const column = header.dataset.column;
+                    sortTable(column);
+                });
+            });
+
+
+            const limitSelect = document.getElementById('limitSelect');
+            limitSelect.addEventListener('change', (e) => {
+                displayLimit = e.target.value === 'all' ? filteredHeroes.length : parseInt(e.target.value);
+                currentPage = 0;
+                renderRows();
+                createPaginationButtons(filteredHeroes, displayLimit);
+                handlePagination(document.getElementById('heroTable'), filteredHeroes);
+            });
+
+            // Add search input event listener
+            searchinput();
+        };
+
+        // Search function
+        function searchinput() {
+            const search = document.getElementById('searchInput');
+            search.addEventListener("input", (event) => {
+                const value = event.target.value.toLowerCase().trim();
+                filteredHeroes = superHeroes.filter((hero) =>
+                    hero.name.toLowerCase().includes(value)
+                );
+
+                // Reset to first page when searching
+                currentPage = 0;
+                if (displayLimit !== 'all' && displayLimit !== filteredHeroes.length) {
+                    displayLimit = Math.min(parseInt(document.getElementById('limitSelect').value), filteredHeroes.length);
+                }
+
+                renderRows();
+                createPaginationButtons(filteredHeroes, displayLimit);
+                handlePagination(document.getElementById('heroTable'), filteredHeroes);
+            });
+        }
+
+        function createPaginationButtons(data, count) {
+            const removold = document.querySelector(".pagination");
+            if (removold) removold.remove();
+            const div = document.createElement("div");
+            div.className = "pagination";
+            div.style.padding = "10px";
+            div.style.display = "flex";
+            div.style.justifyContent = "center";
+            div.style.gap = "4px";
+            div.style.borderRadius = "8px";
+            div.style.marginTop = "20px";
+            let page = 1;
+            for (let i = 0; i < data.length; i += count) {
+                const btn = document.createElement("button");
+                btn.textContent = page++;
+                btn.dataset.start = i;
+                btn.dataset.end = i + count;
+                btn.style.backgroundColor = "rgb(64, 224, 208)";
+                btn.style.color = "ffff";
+                btn.style.padding = "8px 14px";
+                btn.style.borderRadius = "5px";
+                btn.style.cursor = "pointer";
+                btn.style.fontWeight = "bold";
+                btn.style.transition = "background-color 0.3s, color 0.3s";
+
+                div.appendChild(btn);
+            }
+            document.body.append(div);
+        }
+
+        function handlePagination(table, data) {
+            document.querySelectorAll("button").forEach((btn) => {
+                btn.addEventListener("click", () => {
+                    const start = Number(btn.dataset.start);
+                    const end = Number(btn.dataset.end);
+                    table.innerHTML = "";
+                    renderTableHeaders(table);
+                    renderRows(table, data.slice(start, end));
+                });
+            });
+        }
+
+        function renderTableHeaders(table) {
+            const thead = document.createElement('thead');
+            thead.innerHTML = `
+                <tr>
+                    <th rowspan="2">Icon</th>
+                    <th rowspan="2" class="sortable" data-column="name">Name</th>
+                    <th rowspan="2" class="sortable" data-column="fullName">Full Name</th>
+                    <th colspan="6">Powerstats</th>
+                    <th rowspan="2" class="sortable" data-column="race">Race</th>
+                    <th rowspan="2" class="sortable" data-column="gender">Gender</th>
+                    <th rowspan="2" class="sortable" data-column="height">Height</th>
+                    <th rowspan="2" class="sortable" data-column="weight">Weight</th>
+                    <th rowspan="2" class="sortable" data-column="placeOfBirth">Place Of Birth</th>
+                    <th rowspan="2" class="sortable" data-column="alignment">Alignment</th>
+                </tr>
+                <tr>
+                    <th class="sortable" data-column="intelligence">Intelligence</th>
+                    <th class="sortable" data-column="strength">Strength</th>
+                    <th class="sortable" data-column="speed">Speed</th>
+                    <th class="sortable" data-column="durability">Durability</th>
+                    <th class="sortable" data-column="power">Power</th>
+                    <th class="sortable" data-column="combat">Combat</th>
+                </tr>
+            `;
+            table.appendChild(thead);
+
+            const sortableHeaders = table.querySelectorAll('th.sortable');
+            sortableHeaders.forEach(header => {
+                header.addEventListener('click', () => {
+                    const column = header.dataset.column;
+                    sortTable(column);
+                });
+            });
+        }
+
+        const sortTable = (column) => {
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'ascending' ? 'descending' : 'ascending';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'ascending';
+            }
+
+            const headers = document.querySelectorAll('th.sortable');
+            headers.forEach(header => {
+                header.classList.remove('sort-ascending', 'sort-descending');
+                if (header.dataset.column === column) {
+                    header.classList.add(currentSort.direction === 'ascending' ? 'sort-ascending' : 'sort-descending');
+                }
+            });
+
+            filteredHeroes.sort((a, b) => {
+                let valueA, valueB;
+
+                switch (column) {
+                    case 'name':
+                        valueA = a.name || '';
+                        valueB = b.name || '';
+                        break;
+                    case 'fullName':
+                        valueA = a.biography?.fullName || '';
+                        valueB = b.biography?.fullName || '';
+                        break;
+                    case 'intelligence':
+                    case 'strength':
+                    case 'speed':
+                    case 'durability':
+                    case 'power':
+                    case 'combat':
+                        valueA = parseInt(a.powerstats[column]) || 0;
+                        valueB = parseInt(b.powerstats[column]) || 0;
+                        break;
+                    case 'race':
+                        valueA = a.appearance.race || '';
+                        valueB = b.appearance.race || '';
+                        break;
+                    case 'gender':
+                        valueA = a.appearance.gender || '';
+                        valueB = b.appearance.gender || '';
+                        break;
+                    case 'height':
+                        const heightA = (a.appearance.height[1] || '0')
+                        const heightB = (b.appearance.height[1] || '0')
+
+                        const c = heightA.includes('meters') ? 100 : 1
+                        const g = heightB.includes('meters') ? 100 : 1
+
+                        valueA = parseFloat(heightA) * c;
+                        valueB = parseFloat(heightB) * g;
+                        console.log(valueA, valueB)
+                        break;
+                    case 'weight':
+                        const w = a.appearance.weight[1].includes('tons') ? 1000 : 1
+                        const z = b.appearance.weight[1].includes('tons') ? 1000 : 1
+                        valueA = parseInt(a.appearance.weight[1].replace(',', '')) * w || 0;
+                        valueB = parseInt(b.appearance.weight[1].replace(',', '')) * z || 0;
+                        break;
+                    case 'placeOfBirth':
+                        const exp = /[a-zA-Z0-9]+/gi;
+                        const vA = String(a.biography.placeOfBirth).match(exp) || []
+                        const vB = String(b.biography.placeOfBirth).match(exp) || []
+
+                        valueA = vA.join('');
+                        valueB = vB.join('');
+                        break;
+                    case 'alignment':
+                        valueA = a.biography.alignment;
+                        valueB = b.biography.alignment;
+                        break;
+                    default:
+                        return 0;
+                }
+
+                if (typeof valueA === 'string' && typeof valueB === 'string') {
+                    valueA = valueA.toLowerCase();
+                    valueB = valueB.toLowerCase();
+                }
+
+                if (valueA < valueB) return currentSort.direction === 'ascending' ? -1 : 1;
+                if (valueA > valueB) return currentSort.direction === 'ascending' ? 1 : -1;
+                return 0;
+            });
+
+            currentPage = 0;
+            renderRows();
+            createPaginationButtons(filteredHeroes, displayLimit);
+            handlePagination(document.getElementById('heroTable'), filteredHeroes);
+        };
+
+        const renderRows = (table, data) => {
+            if (!data) {
+                const tbody = document.getElementById('heroTableBody');
+                tbody.innerHTML = '';
+
+                let dataToRender = filteredHeroes;
+                let start = 0;
+                let end = filteredHeroes.length;
+
+                if (displayLimit !== 'all' && displayLimit < filteredHeroes.length) {
+                    start = currentPage * displayLimit;
+                    end = Math.min(start + displayLimit, filteredHeroes.length);
+                    dataToRender = filteredHeroes.slice(start, end);
+                }
+
+                for (let i = 0; i < dataToRender.length; i++) {
+                    const hero = dataToRender[i];
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td><img src="${hero.images.xs}" alt="${hero.name}" onerror="this.style.display='none'"></td>
+                        <td>${hero.name}</td>
+                        <td>${hero.biography.fullName}</td>
+                        <td>${hero.powerstats.intelligence}</td>
+                        <td>${hero.powerstats.strength}</td>
+                        <td>${hero.powerstats.speed}</td>
+                        <td>${hero.powerstats.durability}</td>
+                        <td>${hero.powerstats.power}</td>
+                        <td>${hero.powerstats.combat}</td>
+                        <td>${hero.appearance.race}</td>
+                        <td>${hero.appearance.gender}</td>
+                        <td>${hero.appearance.height[1]}</td>
+                        <td>${hero.appearance.weight[1]}</td>
+                        <td>${hero.biography.placeOfBirth}</td>
+                        <td>${hero.biography.alignment}</td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            } else {
+                const tbody = document.createElement('tbody');
+                tbody.id = 'heroTableBody';
+
+                for (let i = 0; i < data.length; i++) {
+                    const hero = data[i];
+                    const tr = document.createElement("tr");
+                    tr.innerHTML = `
+                        <td><img src="${hero.images.xs}" alt="${hero.name}"></td>
+                        <td>${hero.name}</td>
+                        <td>${hero.biography.fullName}</td>
+                        <td>${hero.powerstats.intelligence}</td>
+                        <td>${hero.powerstats.strength}</td>
+                        <td>${hero.powerstats.speed}</td>
+                        <td>${hero.powerstats.durability}</td>
+                        <td>${hero.powerstats.power}</td>
+                        <td>${hero.powerstats.combat}</td>
+                        <td>${hero.appearance.race}</td>
+                        <td>${hero.appearance.gender}</td>
+                        <td>${hero.appearance.height[1]}</td>
+                        <td>${hero.appearance.weight[1]}</td>
+                        <td>${hero.biography.placeOfBirth}</td>
+                        <td>${hero.biography.alignment}</td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+                table.appendChild(tbody);
+            }
+        };
+
+        const importSuperHeroes = () => {
+            fetch('https://rawcdn.githack.com/akabab/superhero-api/0.2.0/api/all.json')
+                .then((response) => response.json())
+                .then(loadSuperHeroes)
+        };
+
+        importSuperHeroes();
+    </script>
 </body>
 
 </html>
