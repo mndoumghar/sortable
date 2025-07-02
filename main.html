@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            color: #fff;
+            background: hsl(0, 0%, 12%);
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .card-container {
+            background: #1a1a2e;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .details-div {
+            padding: 20px;
+            color: #fff;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #1a1a2e;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+
+        th {
+            background: #2a2a4e;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            transition: background-color 0.3s ease;
+        }
+
+        th:hover {
+            background: #3a3a6e;
+        }
+
+        th.sortable::after {
+            content: ' ↕️';
+            font-size: 12px;
+            opacity: 0.7;
+        }
+
+        th.sort-asc::after {
+            content: ' ↑';
+            color: #4CAF50;
+        }
+
+        th.sort-desc::after {
+            content: ' ↓';
+            color: #f44336;
+        }
+
+        img {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+        }
+
+        select {
+            padding: 8px;
+            background: #2a2a4e;
+            color: #fff;
+            border: 1px solid #444;
+            border-radius: 4px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="controls" style="display: none;">
+        <label for="limitSelect">Show: </label>
+        <select id="limitSelect">
+            <option value="10">10</option>
+            <option value="20" selected>20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="all">All results</option>
+        </select>
+    </div>
+
+    <table id="heroTable" style="display: none;">
+        <thead>
+            <tr>
+                <th rowspan="2">Icon</th>
+                <th rowspan="2" class="sortable" data-column="name">Name</th>
+                <th rowspan="2" class="sortable" data-column="fullName">Full Name</th>
+                <th colspan="6">Powerstats</th>
+                <th rowspan="2" class="sortable" data-column="race">Race</th>
+                <th rowspan="2" class="sortable" data-column="gender">Gender</th>
+                <th rowspan="2" class="sortable" data-column="height">Height</th>
+                <th rowspan="2" class="sortable" data-column="weight">Weight</th>
+                <th rowspan="2" class="sortable" data-column="placeOfBirth">Place Of Birth</th>
+                <th rowspan="2" class="sortable" data-column="alignment">Alignment</th>
+            </tr>
+            <tr>
+                <th class="sortable" data-column="intelligence">Intelligence</th>
+                <th class="sortable" data-column="strength">Strength</th>
+                <th class="sortable" data-column="speed">Speed</th>
+                <th class="sortable" data-column="durability">Durability</th>
+                <th class="sortable" data-column="power">Power</th>
+                <th class="sortable" data-column="combat">Combat</th>
+            </tr>
+        </thead>
+        <tbody id="heroTableBody">
+        </tbody>
+    </table>
+
+    <script>
+        let superHeroes = [];
+        let currentSort = { column: null, direction: 'asc' };
+        let displayLimit = 20;
+
+        const loadSuperHeroes = (heroes) => {
+            superHeroes = heroes;
+            document.getElementById('controls').style.display = 'block';
+            document.getElementById('heroTable').style.display = 'table';
+
+            setupEventListeners();
+            renderRows();
+        };
+
+        const setupEventListeners = () => {
+            const sortableHeaders = document.querySelectorAll('th.sortable');
+            sortableHeaders.forEach(header => {
+                header.addEventListener('click', () => {
+                    const column = header.dataset.column;
+                    sortTable(column);
+                });
+            });
+
+
+            const limitSelect = document.getElementById('limitSelect');
+            limitSelect.addEventListener('change', (e) => {
+                displayLimit = e.target.value === 'all' ? superHeroes.length : parseInt(e.target.value);
+                renderRows();
+            });
+        };
+
+        const sortTable = (column) => {
+            if (currentSort.column === column) {
+                currentSort.direction = currentSort.direction === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSort.column = column;
+                currentSort.direction = 'asc';
+            }
+
+            const headers = document.querySelectorAll('th.sortable');
+            headers.forEach(header => {
+                header.classList.remove('sort-asc', 'sort-desc');
+                if (header.dataset.column === column) {
+                    header.classList.add(currentSort.direction === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+            });
+
+            superHeroes.sort((a, b) => {
+                let valueA, valueB;
+
+                switch (column) {
+                    case 'name':
+                        valueA = a.name || '';
+                        valueB = b.name || '';
+                        break;
+                    case 'fullName':
+                        valueA = a.biography?.fullName || '';
+                        valueB = b.biography?.fullName || '';
+                        break;
+                    case 'intelligence':
+                    case 'strength':
+                    case 'speed':
+                    case 'durability':
+                    case 'power':
+                    case 'combat':
+                        valueA = parseInt(a.powerstats[column]) || 0;
+                        valueB = parseInt(b.powerstats[column]) || 0;
+                        break;
+                    case 'race':
+                        valueA = a.appearance.race || '';
+                        valueB = b.appearance.race || '';
+                        break;
+                    case 'gender':
+                        valueA = a.appearance?.gender || '';
+                        valueB = b.appearance?.gender || '';
+                        break;
+                    case 'height':
+                        const heightA = (a.appearance.height[1] || '0')
+                        const heightB = (b.appearance.height[1] || '0')
+
+                        const c = heightA.includes('meters') ? 100 : 1
+                        const g = heightB.includes('meters') ? 100 : 1
+
+                        valueA = parseFloat(heightA) * c;
+                        valueB = parseFloat(heightB) * g;
+                        console.log(valueA, valueB)
+                        break;
+                    case 'weight':
+                        const w = a.appearance.weight[1].includes('tons') ? 1000 : 1
+                        const z = b.appearance.weight[1].includes('tons') ? 1000 : 1
+                        valueA = parseInt(a.appearance.weight[1].replace(',', '')) * w || 0;
+                        valueB = parseInt(b.appearance.weight[1].replace(',', '')) * z || 0;
+                        break;
+                    case 'placeOfBirth':
+                        const exp = /[a-zA-Z0-9]+/gi;
+                        const vA = String(a.biography.placeOfBirth).match(exp) || []
+                        const vB = String(b.biography.placeOfBirth).match(exp) || []
+
+                        valueA = vA.join('');
+                        valueB = vB.join('');
+                        break;
+                    case 'alignment':
+                        valueA = a.biography.alignment;
+                        valueB = b.biography.alignment;
+                        break;
+                    default:
+                        return 0;
+                }
+
+                // Handle string vs number comparison
+                if (typeof valueA === 'string' && typeof valueB === 'string') {
+                    valueA = valueA.toLowerCase();
+                    valueB = valueB.toLowerCase();
+                }
+
+                if (valueA < valueB) return currentSort.direction === 'asc' ? -1 : 1;
+                if (valueA > valueB) return currentSort.direction === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            renderRows();
+        };
+
+        const renderRows = () => {
+            const tbody = document.getElementById('heroTableBody');
+            tbody.innerHTML = '';
+
+            const limit = displayLimit === 'all' ? superHeroes.length : Math.min(displayLimit, superHeroes.length);
+
+            for (let i = 0; i < limit; i++) {
+                const hero = superHeroes[i];
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td><img src="${hero.images.xs}" alt="${hero.name}" onerror="this.style.display='none'"></td>
+                    <td>${hero.name}</td>
+                    <td>${hero.biography.fullName}</td>
+                    <td>${hero.powerstats.intelligence}</td>
+                    <td>${hero.powerstats.strength}</td>
+                    <td>${hero.powerstats.speed}</td>
+                    <td>${hero.powerstats.durability}</td>
+                    <td>${hero.powerstats.power}</td>
+                    <td>${hero.powerstats.combat}</td>
+                    <td>${hero.appearance.race}</td>
+                    <td>${hero.appearance.gender}</td>
+                    <td>${hero.appearance.height[1]}</td>
+                    <td>${hero.appearance.weight[1]}</td>
+                    <td>${hero.biography.placeOfBirth}</td>
+                    <td>${hero.biography.alignment}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+        };
+
+        const importSuperHeroes = () => {
+            fetch('https://rawcdn.githack.com/akabab/superhero-api/0.2.0/api/all.json')
+                .then((response) => response.json())
+                .then(loadSuperHeroes)
+        };
+
+        importSuperHeroes();
+    </script>
+</body>
+
+</html>
