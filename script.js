@@ -48,6 +48,7 @@ const sortData = (arr, column, order = 'asc') => {
       const cm2 = y.includes('meters') ? 100 : 1
       valA = parseFloat(x) * cm1
       valB = parseFloat(y) * cm2
+
     } else if (column === 'weight') {
       valA = a.appearance.weight?.[1] || ''
       valB = b.appearance.weight?.[1] || ''
@@ -64,33 +65,37 @@ const sortData = (arr, column, order = 'asc') => {
       console.log(valA, valB);
 
     } else if (column === 'name') {
-      
+
 
       valA = (!a.name || a.name === '-') ? null : a.name
-      valB = (!b.name || b.name === '-') ? null :b.name
+      valB = (!b.name || b.name === '-') ? null : b.name
 
 
     } else if (column === 'fullName') {
-      
+
       valA = (!a.biography.fullName || a.biography.fullName === '-') ? null : a.biography.fullName
-      valB = (!b.biography.fullName || b.biography.fullName === '-') ? null :b.biography.fullName
+      valB = (!b.biography.fullName || b.biography.fullName === '-') ? null : b.biography.fullName
 
 
     } else if (column === 'race') {
 
 
       valA = (!a.appearance.race || a.appearance.race === '-') ? null : a.appearance.race
-      valB = (!b.appearance.race || b.appearance.race === '-') ? null :b.appearance.race
+      valB = (!b.appearance.race || b.appearance.race === '-') ? null : b.appearance.race
 
     } else if (column === 'placeOfBirth') {
+      const exp = /[a-zA-Z0-9]+/gi;
+      const x = (!a.biography.placeOfBirth || a.biography.placeOfBirth === '-') ? null : a.biography.placeOfBirth
+      const y = (!b.biography.placeOfBirth || b.biography.placeOfBirth === '-') ? null : b.biography.placeOfBirth
+      const vA = String(x).match(exp) || []
+      const vB = String(y).match(exp) || []
 
-      valA = (!a.biography.placeOfBirth || a.biography.placeOfBirth === '-') ? null : a.biography.placeOfBirth
-      valB = (!b.biography.placeOfBirth || b.biography.placeOfBirth === '-') ? null :b.biography.placeOfBirth
-
+      valA = vA.join('');
+      valB = vB.join('');
     } else if (column === 'alignment') {
 
       valA = (!a.biography.alignment || a.biography.alignment === '-') ? null : a.biography.alignment
-      valB = (!b.biography.alignment || b.biography.alignment === '-') ? null :b.biography.alignment
+      valB = (!b.biography.alignment || b.biography.alignment === '-') ? null : b.biography.alignment
 
     } else if (['intelligence', 'strength', 'speed', 'durability', 'power', 'combat'].includes(column)) {
       valA = a.powerstats[column] ?? '';
